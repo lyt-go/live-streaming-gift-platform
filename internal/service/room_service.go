@@ -117,6 +117,7 @@ func (s *Service) EndRoom(id string) (*model.Room, error) {
 	if err != nil {
 		return nil, err
 	}
+	r.Status = model.RoomStatusEnded
 	if !model.CanTransition(r.Status, model.RoomStatusEnded) {
 		return nil, model.NewValidationError("status", "当前状态不允许下播")
 	}

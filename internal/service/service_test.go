@@ -56,6 +56,17 @@ func TestRoomLifecycle(t *testing.T) {
 	}
 }
 
+func TestEndingPendingRoomDoesNotMutateState(t *testing.T) {
+	s := newTestService()
+	streamer := mustCreateUser(t, s, "pending-streamer", model.UserRoleStreamer)
+	room, err := s.CreateRoom(model.Room{Title: "pending-room", Category: "game", StreamerID: streamer.ID})
+	if err != nil { t.Fatal(err) }
+	if _, err = s.EndRoom(room.ID); err == nil { t.Fatal("expected ending pending room to fail") }
+	got, err := s.GetRoom(room.ID)
+	if err != nil { t.Fatal(err) }
+	if got.Status != model.RoomStatusPending { t.Fatalf("expected pending status, got %s", got.Status) }
+}
+
 func TestDanmakuModeration(t *testing.T) {
 	s := newTestService()
 	streamer := mustCreateUser(t, s, "主播", model.UserRoleStreamer)
