@@ -51,6 +51,9 @@ type Store interface {
 	ListFollows() []*model.Follow
 	DeleteFollow(id string) error
 	FollowExists(followerID, followeeID string) bool
+	// DeleteFollowsByUser 删除与用户相关的全部关注关系（作为关注者或被关注者），
+	// 返回被删除的关系，供上层同步计数。返回的切片仅供读取，不可用于改写存储。
+	DeleteFollowsByUser(userID string) []*model.Follow
 
 	// GiftRecord 送礼记录
 	CreateGiftRecord(r *model.GiftRecord) error

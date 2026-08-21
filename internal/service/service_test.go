@@ -65,6 +65,30 @@ func TestDeletingUserRemovesFollowRelations(t *testing.T) {
 	items, total, err := s.ListFollows(model.FollowFilter{FollowerID: a.ID}, 1, 10)
 	if err != nil { t.Fatal(err) }
 	if total != 0 || len(items) != 0 { t.Fatalf("expected deleted user's follows removed, got total=%d len=%d", total, len(items)) }
+	// 删除作为关注者后，被关注者的粉丝计数应同步回退。
+	bgot, _ := s.GetUser(b.ID)
+	if bgot.FollowersCount != 0 { t.Fatalf("expected followers 0, got %d", bgot.FollowersCount) }
+}
+
+func TestDeletingFolloweeRemovesFollowRelations(t *testing.T) {
+	s := newTestService()
+	a := mustCreateUser(t, s, "del-2-a", model.UserRoleViewer)
+	b := mustCreateUser(t, s, "del-2-b", model.UserRoleStreamer)
+	c := mustCreateUser(t, s, "del-2-c", model.UserRoleViewer)
+	// b 关注 a、b 关注 c：删除被关注者 b 后，b 作为关注者的关系也应清空。
+	if _, err := s.Follow(b.ID, a.ID); err != nil { t.Fatal(err) }
+	if _, err := s.Follow(b.ID, c.ID); err != nil { t.Fatal(err) }
+	// a 也关注 b，删除 b 后 a 的关注列表不应再查到该关系。
+	if _, err := s.Follow(a.ID, b.ID); err != nil { t.Fatal(err) }
+	if err := s.DeleteUser(b.ID); err != nil { t.Fatal(err) }
+	// b 的关注列表应清空。
+	items, total, err := s.ListFollows(model.FollowFilter{FollowerID: b.ID}, 1, 10)
+	if err != nil { t.Fatal(err) }
+	if total != 0 || len(items) != 0 { t.Fatalf("expected deleted user's follows removed, got total=%d len=%d", total, len(items)) }
+	// a 关注 b 的关系不应再可查。
+	items, total, err = s.ListFollows(model.FollowFilter{FollowerID: a.ID, FolloweeID: b.ID}, 1, 10)
+	if err != nil { t.Fatal(err) }
+	if total != 0 || len(items) != 0 { t.Fatalf("expected follow removed after followee deleted, got total=%d len=%d", total, len(items)) }
 }
 
 func TestDanmakuModeration(t *testing.T) {

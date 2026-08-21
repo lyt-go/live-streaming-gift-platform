@@ -88,8 +88,35 @@ func (s *Service) UpdateUser(id string, input model.User) (*model.User, error) {
 	return existing, nil
 }
 
-// DeleteUser 删除用户。
+// DeleteUser 删除用户，并清理其关联的全部关注关系。
+// 关注关系涉及两端，被删用户既可能是关注者（A 关注 B）也可能是被关注者（C 关注 A），
+// 因此删除时需要双向清理，并同步修正相关用户的粉丝计数，避免关注列表残留悬空关系。
 func (s *Service) DeleteUser(id string) error {
+	if _, err := s.store.GetUser(id); err != nil {
+		return err
+	}
+	// 删除该用户相关的全部关注关系（作为关注者或被关注者）。
+	removed := s.store.DeleteFollowsByUser(id)
+	// 按 followeeID 汇总粉丝计数应减少的数量：
+	// 仅在被删用户作为关注者（A 关注 B）时，B 的粉丝数需要减少；
+	// 当用户作为被关注者被删除（C 关注 A）时，A 已删除，无需更新其计数。
+	decrements := make(map[string]int64)
+	for _, f := range removed {
+		if f.FollowerID == id {
+			decrements[f.FolloweeID]++
+		}
+	}
+	for followeeID, n := range decrements {
+		if followee, err := s.store.GetUser(followeeID); err == nil {
+			if followee.FollowersCount > n {
+				followee.FollowersCount -= n
+			} else {
+				followee.FollowersCount = 0
+			}
+			followee.UpdatedAt = time.Now()
+			_ = s.store.UpdateUser(followee)
+		}
+	}
 	return s.store.DeleteUser(id)
 }
 

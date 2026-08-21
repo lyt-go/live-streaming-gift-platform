@@ -129,6 +129,36 @@ func TestFollowUniqueAndExists(t *testing.T) {
 	}
 }
 
+func TestDeleteFollowsByUser(t *testing.T) {
+	s := newTestStore()
+	// u1 关注 u2、u1 关注 u3、u3 关注 u1：删除 u1 应同时清理三端关系。
+	if err := s.CreateFollow(&model.Follow{ID: "f1", FollowerID: "u1", FolloweeID: "u2"}); err != nil {
+		t.Fatalf("CreateFollow: %v", err)
+	}
+	if err := s.CreateFollow(&model.Follow{ID: "f2", FollowerID: "u1", FolloweeID: "u3"}); err != nil {
+		t.Fatalf("CreateFollow: %v", err)
+	}
+	if err := s.CreateFollow(&model.Follow{ID: "f3", FollowerID: "u3", FolloweeID: "u1"}); err != nil {
+		t.Fatalf("CreateFollow: %v", err)
+	}
+	removed := s.DeleteFollowsByUser("u1")
+	if len(removed) != 3 {
+		t.Fatalf("期望删除 3 条关系, got %d", len(removed))
+	}
+	for _, f := range removed {
+		if f.FollowerID != "u1" && f.FolloweeID != "u1" {
+			t.Fatalf("删除了无关关系: %+v", f)
+		}
+	}
+	if len(s.ListFollows()) != 0 {
+		t.Fatalf("期望关注关系全部清理, got %d", len(s.ListFollows()))
+	}
+	// 无关联用户删除应返回空切片。
+	if r := s.DeleteFollowsByUser("no-such-user"); len(r) != 0 {
+		t.Fatalf("期望空切片, got %d", len(r))
+	}
+}
+
 func TestGiftRecordCRUD(t *testing.T) {
 	s := newTestStore()
 	rec := &model.GiftRecord{ID: "gr1", RoomID: "r1", UserID: "u1", GiftID: "g1", Quantity: 2, Amount: 20000}

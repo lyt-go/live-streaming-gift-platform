@@ -56,3 +56,18 @@ func (s *MemoryStore) FollowExists(followerID, followeeID string) bool {
 	}
 	return false
 }
+
+// DeleteFollowsByUser 删除与用户相关的全部关注关系（作为关注者或被关注者），
+// 返回被删除的关系。由 DeleteUser 在清理关联数据时调用。
+func (s *MemoryStore) DeleteFollowsByUser(userID string) []*model.Follow {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	removed := make([]*model.Follow, 0)
+	for id, f := range s.follows {
+		if f.FollowerID == userID || f.FolloweeID == userID {
+			removed = append(removed, f)
+			delete(s.follows, id)
+		}
+	}
+	return removed
+}
