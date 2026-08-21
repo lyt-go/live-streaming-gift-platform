@@ -88,9 +88,18 @@ func (s *Service) UpdateUser(id string, input model.User) (*model.User, error) {
 	return existing, nil
 }
 
-// DeleteUser 删除用户。
+// DeleteUser 删除用户，并级联清理其送礼记录，避免删除后仍能按该用户查到历史记录。
 func (s *Service) DeleteUser(id string) error {
-	return s.store.DeleteUser(id)
+	if err := s.store.DeleteUser(id); err != nil {
+		return err
+	}
+	// ListGiftRecords 返回的是新切片，遍历时删除底层数据安全。
+	for _, rec := range s.store.ListGiftRecords() {
+		if rec.UserID == id {
+			_ = s.store.DeleteGiftRecord(rec.ID)
+		}
+	}
+	return nil
 }
 
 // BanUser 封禁用户。
