@@ -99,6 +99,21 @@ func TestGiftRecordCrossEntityValidation(t *testing.T) {
 	}
 }
 
+func TestDeletingGiftSenderRemovesGiftRecords(t *testing.T) {
+	s := newTestService()
+	viewer := mustCreateUser(t, s, "gift-delete", model.UserRoleViewer)
+	streamer := mustCreateUser(t, s, "gift-streamer", model.UserRoleStreamer)
+	room, err := s.CreateRoom(model.Room{Title: "gift-room", Category: "game", StreamerID: streamer.ID})
+	if err != nil { t.Fatal(err) }
+	if _, err = s.StartRoom(room.ID); err != nil { t.Fatal(err) }
+	gift := mustCreateGift(t, s, "cascade-gift", 100)
+	if _, err = s.CreateGiftRecord(model.GiftRecord{RoomID: room.ID, UserID: viewer.ID, GiftID: gift.ID, Quantity: 1}); err != nil { t.Fatal(err) }
+	if err = s.DeleteUser(viewer.ID); err != nil { t.Fatal(err) }
+	items, total, err := s.ListGiftRecords(model.GiftRecordFilter{UserID: viewer.ID}, 1, 10)
+	if err != nil { t.Fatal(err) }
+	if total != 0 || len(items) != 0 { t.Fatalf("expected gift records removed, got total=%d len=%d", total, len(items)) }
+}
+
 func TestFollowIncrementsCount(t *testing.T) {
 	s := newTestService()
 	a := mustCreateUser(t, s, "a", model.UserRoleViewer)
