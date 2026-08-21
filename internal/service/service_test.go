@@ -77,6 +77,19 @@ func TestDanmakuModeration(t *testing.T) {
 	}
 }
 
+func TestDeletingDanmakuSenderRemovesDanmakus(t *testing.T) {
+	s := newTestService()
+	user := mustCreateUser(t, s, "danmaku-delete", model.UserRoleViewer)
+	streamer := mustCreateUser(t, s, "danmaku-streamer", model.UserRoleStreamer)
+	room, err := s.CreateRoom(model.Room{Title: "danmaku-room", Category: "game", StreamerID: streamer.ID})
+	if err != nil { t.Fatal(err) }
+	if _, err = s.CreateDanmaku(model.Danmaku{RoomID: room.ID, UserID: user.ID, Content: "orphan"}); err != nil { t.Fatal(err) }
+	if err = s.DeleteUser(user.ID); err != nil { t.Fatal(err) }
+	items, total, err := s.ListDanmakus(model.DanmakuFilter{UserID: user.ID}, 1, 10)
+	if err != nil { t.Fatal(err) }
+	if total != 0 || len(items) != 0 { t.Fatalf("expected danmakus removed, got total=%d len=%d", total, len(items)) }
+}
+
 func TestGiftRecordCrossEntityValidation(t *testing.T) {
 	s := newTestService()
 	streamer := mustCreateUser(t, s, "主播", model.UserRoleStreamer)
