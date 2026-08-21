@@ -88,9 +88,20 @@ func (s *Service) UpdateUser(id string, input model.User) (*model.User, error) {
 	return existing, nil
 }
 
-// DeleteUser 删除用户。
+// DeleteUser 删除用户，并清理其作为主播名下的直播间，
+// 避免删除主播后仍能按主播筛选到悬空的房间。
 func (s *Service) DeleteUser(id string) error {
-	return s.store.DeleteUser(id)
+	if err := s.store.DeleteUser(id); err != nil {
+		return err
+	}
+	// 主播已删除，清理其名下直播间；此时 CreateRoom 已无法再为其建房，
+	// 故不会有新的悬空房间产生。
+	for _, r := range s.store.ListRooms() {
+		if r.StreamerID == id {
+			_ = s.store.DeleteRoom(r.ID)
+		}
+	}
+	return nil
 }
 
 // BanUser 封禁用户。
