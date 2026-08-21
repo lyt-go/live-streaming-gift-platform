@@ -56,6 +56,17 @@ func TestRoomLifecycle(t *testing.T) {
 	}
 }
 
+func TestDeletingUserRemovesFollowRelations(t *testing.T) {
+	s := newTestService()
+	a := mustCreateUser(t, s, "delete-a", model.UserRoleViewer)
+	b := mustCreateUser(t, s, "delete-b", model.UserRoleStreamer)
+	if _, err := s.Follow(a.ID, b.ID); err != nil { t.Fatal(err) }
+	if err := s.DeleteUser(a.ID); err != nil { t.Fatal(err) }
+	items, total, err := s.ListFollows(model.FollowFilter{FollowerID: a.ID}, 1, 10)
+	if err != nil { t.Fatal(err) }
+	if total != 0 || len(items) != 0 { t.Fatalf("expected deleted user's follows removed, got total=%d len=%d", total, len(items)) }
+}
+
 func TestDanmakuModeration(t *testing.T) {
 	s := newTestService()
 	streamer := mustCreateUser(t, s, "主播", model.UserRoleStreamer)
