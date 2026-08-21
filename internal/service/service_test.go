@@ -56,6 +56,17 @@ func TestRoomLifecycle(t *testing.T) {
 	}
 }
 
+func TestDeletingStreamerRemovesRooms(t *testing.T) {
+	s := newTestService()
+	streamer := mustCreateUser(t, s, "room-delete", model.UserRoleStreamer)
+	room, err := s.CreateRoom(model.Room{Title: "orphan-room", Category: "game", StreamerID: streamer.ID})
+	if err != nil { t.Fatal(err) }
+	if err = s.DeleteUser(streamer.ID); err != nil { t.Fatal(err) }
+	rooms, total, err := s.ListRooms(model.RoomFilter{StreamerID: streamer.ID}, 1, 10)
+	if err != nil { t.Fatal(err) }
+	if total != 0 || len(rooms) != 0 { t.Fatalf("expected rooms removed, got total=%d len=%d (room=%s)", total, len(rooms), room.ID) }
+}
+
 func TestDanmakuModeration(t *testing.T) {
 	s := newTestService()
 	streamer := mustCreateUser(t, s, "主播", model.UserRoleStreamer)
