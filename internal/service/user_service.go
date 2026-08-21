@@ -89,7 +89,18 @@ func (s *Service) UpdateUser(id string, input model.User) (*model.User, error) {
 }
 
 // DeleteUser 删除用户。
+//
+// 删除用户时级联清理其发送的弹幕，避免用户删除后仍可按 user_id 查到旧弹幕。
+// 弹幕审核（approve/block）与查询路径不受影响，仅删除归属于该用户的弹幕。
 func (s *Service) DeleteUser(id string) error {
+	if _, err := s.store.GetUser(id); err != nil {
+		return err
+	}
+	for _, d := range s.store.ListDanmakus() {
+		if d.UserID == id {
+			_ = s.store.DeleteDanmaku(d.ID)
+		}
+	}
 	return s.store.DeleteUser(id)
 }
 
