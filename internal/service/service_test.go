@@ -123,6 +123,19 @@ func TestFollowIncrementsCount(t *testing.T) {
 	}
 }
 
+func TestDuplicateFollowDoesNotIncreaseFollowerCount(t *testing.T) {
+	s := newTestService()
+	a, err := s.CreateUser(model.User{Nickname: "dup-a", Role: model.UserRoleViewer})
+	if err != nil { t.Fatal(err) }
+	b, err := s.CreateUser(model.User{Nickname: "dup-b", Role: model.UserRoleStreamer})
+	if err != nil { t.Fatal(err) }
+	if _, err = s.Follow(a.ID, b.ID); err != nil { t.Fatal(err) }
+	if _, err = s.Follow(a.ID, b.ID); err == nil { t.Fatal("expected duplicate follow to fail") }
+	got, err := s.GetUser(b.ID)
+	if err != nil { t.Fatal(err) }
+	if got.FollowersCount != 1 { t.Fatalf("expected follower count 1, got %d", got.FollowersCount) }
+}
+
 func TestTopStreamers(t *testing.T) {
 	s := newTestService()
 	s1 := mustCreateUser(t, s, "主播1", model.UserRoleStreamer)

@@ -26,6 +26,11 @@ func (s *Service) Follow(followerID, followeeID string) (*model.Follow, error) {
 	if err := f.Validate(); err != nil {
 		return nil, err
 	}
+	if followee, err := s.store.GetUser(followeeID); err == nil {
+		followee.FollowersCount++
+		followee.UpdatedAt = time.Now()
+		_ = s.store.UpdateUser(followee)
+	}
 	if err := s.store.CreateFollow(f); err != nil {
 		return nil, err
 	}
