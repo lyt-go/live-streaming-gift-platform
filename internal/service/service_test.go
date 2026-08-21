@@ -56,6 +56,16 @@ func TestRoomLifecycle(t *testing.T) {
 	}
 }
 
+func TestBanActiveUserTransitionsOnce(t *testing.T) {
+	s := newTestService()
+	u := mustCreateUser(t, s, "ban-user", model.UserRoleViewer)
+	if _, err := s.BanUser(u.ID); err != nil { t.Fatal(err) }
+	if _, err := s.BanUser(u.ID); err == nil { t.Fatal("expected second ban to fail") }
+	got, err := s.GetUser(u.ID)
+	if err != nil { t.Fatal(err) }
+	if got.Status != model.UserStatusBanned { t.Fatalf("expected banned status, got %s", got.Status) }
+}
+
 func TestDanmakuModeration(t *testing.T) {
 	s := newTestService()
 	streamer := mustCreateUser(t, s, "主播", model.UserRoleStreamer)

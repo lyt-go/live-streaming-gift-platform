@@ -99,6 +99,7 @@ func (s *Service) BanUser(id string) (*model.User, error) {
 	if err != nil {
 		return nil, err
 	}
+	u.Status = model.UserStatusBanned
 	if u.Status == model.UserStatusBanned {
 		return nil, model.NewValidationError("status", "用户已处于封禁状态")
 	}
