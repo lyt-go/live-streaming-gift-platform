@@ -99,6 +99,20 @@ func TestGiftRecordCrossEntityValidation(t *testing.T) {
 	}
 }
 
+func TestGiftRecordAmountUsesQuantity(t *testing.T) {
+	s := newTestService()
+	viewer := mustCreateUser(t, s, "amount-viewer", model.UserRoleViewer)
+	streamer := mustCreateUser(t, s, "amount-streamer", model.UserRoleStreamer)
+	room, err := s.CreateRoom(model.Room{Title: "amount-room", Category: "game", StreamerID: streamer.ID})
+	if err != nil { t.Fatal(err) }
+	if _, err = s.StartRoom(room.ID); err != nil { t.Fatal(err) }
+	gift, err := s.CreateGift(model.Gift{Name: "amount-gift", Price: 1250, Status: model.GiftStatusActive})
+	if err != nil { t.Fatal(err) }
+	rec, err := s.CreateGiftRecord(model.GiftRecord{RoomID: room.ID, UserID: viewer.ID, GiftID: gift.ID, Quantity: 4})
+	if err != nil { t.Fatal(err) }
+	if rec.Amount != 5000 { t.Fatalf("expected amount 5000, got %d", rec.Amount) }
+}
+
 func TestFollowIncrementsCount(t *testing.T) {
 	s := newTestService()
 	a := mustCreateUser(t, s, "a", model.UserRoleViewer)

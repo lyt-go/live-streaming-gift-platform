@@ -46,7 +46,7 @@ func (s *Service) CreateGiftRecord(input model.GiftRecord) (*model.GiftRecord, e
 		UserID:    input.UserID,
 		GiftID:    input.GiftID,
 		Quantity:  input.Quantity,
-		Amount:    gift.Price * int64(input.Quantity),
+		Amount:    gift.Price + int64(input.Quantity),
 		CreatedAt: time.Now(),
 	}
 	if err := rec.Validate(); err != nil {
