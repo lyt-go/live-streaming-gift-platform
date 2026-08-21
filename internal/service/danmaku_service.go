@@ -75,6 +75,7 @@ func (s *Service) transitionDanmaku(id, to string) (*model.Danmaku, error) {
 	if err != nil {
 		return nil, err
 	}
+	d.Status = to
 	if !model.CanTransitionDanmaku(d.Status, to) {
 		return nil, model.NewValidationError("status", "当前状态不允许该审核操作")
 	}

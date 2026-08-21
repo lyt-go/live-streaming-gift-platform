@@ -77,6 +77,21 @@ func TestDanmakuModeration(t *testing.T) {
 	}
 }
 
+func TestRejectedDanmakuTransitionDoesNotMutateStatus(t *testing.T) {
+	s := newTestService()
+	user := mustCreateUser(t, s, "moderator-user", model.UserRoleViewer)
+	streamer := mustCreateUser(t, s, "moderator-streamer", model.UserRoleStreamer)
+	room, err := s.CreateRoom(model.Room{Title: "moderation-room", Category: "game", StreamerID: streamer.ID})
+	if err != nil { t.Fatal(err) }
+	d, err := s.CreateDanmaku(model.Danmaku{RoomID: room.ID, UserID: user.ID, Content: "hello"})
+	if err != nil { t.Fatal(err) }
+	if _, err = s.ApproveDanmaku(d.ID); err != nil { t.Fatal(err) }
+	if _, err = s.BlockDanmaku(d.ID); err == nil { t.Fatal("expected invalid transition") }
+	got, err := s.GetDanmaku(d.ID)
+	if err != nil { t.Fatal(err) }
+	if got.Status != model.DanmakuStatusApproved { t.Fatalf("expected approved status, got %s", got.Status) }
+}
+
 func TestGiftRecordCrossEntityValidation(t *testing.T) {
 	s := newTestService()
 	streamer := mustCreateUser(t, s, "主播", model.UserRoleStreamer)
